@@ -42,11 +42,11 @@ function update_content(domain_info) {
 
         if (domain_info.lax) {
             const count = programs.length == 1 ? "a" : programs.length
-            $("#program-info-title").innerText = `We couln't find a program with this exact scope. But we found ${count} program${programs.length > 1 ? "s" : ""} that might match!`
+            $("#program-info-title").innerText = `We couln't find a VDP with this exact scope. But we found ${count} VDP that might match!`
             $("#program-info-title").classList.add("lax")
         } else {
             const count = programs.length == 1 ? "A" : programs.length
-            $("#program-info-title").innerText = `YAY! WE FOUND ${count} PROGRAM${programs.length > 1 ? "S" : ""}!`
+            $("#program-info-title").innerText = `YAY! WE FOUND ${count} VPD!`
             $("#program-info-title").classList.remove("lax")
         }
 
