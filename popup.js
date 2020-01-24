@@ -46,7 +46,7 @@ function update_content(domain_info) {
             $("#program-info-title").classList.add("lax")
         } else {
             const count = programs.length == 1 ? "A" : programs.length
-            $("#program-info-title").innerText = `YAY! WE FOUND ${count} VPD!`
+            $("#program-info-title").innerText = `YAY! WE FOUND ${count} VDP!`
             $("#program-info-title").classList.remove("lax")
         }
 
