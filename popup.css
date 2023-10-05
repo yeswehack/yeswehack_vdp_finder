@@ -37,7 +37,8 @@ main>div {
 
 /* BANNER */
 #top_logo {
-    display: inline-block;
+    display: inline-flex;
+    justify-center
     width: 60%;
     margin: 10px auto;
 }
