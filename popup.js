@@ -63,6 +63,11 @@ function update_content(domain_info) {
 
 document.addEventListener("DOMContentLoaded", _ => {
     getTab().then(tab => {
+        if (!tab || !tab.url) {
+            $("#domain-host").innerText = "N/A";
+            return;
+        }
+
         const url = new URL(tab.url)
         $("#domain-host").innerText = url.hostname;
 
@@ -88,5 +93,7 @@ function getTab() {
 /* on open */
 
 getTab().then(tab => {
-    chrome.runtime.sendMessage({ msg: "GET_DOMAIN_INFO", data: tab.url }, update_content);
+    if (tab && tab.url) {
+        chrome.runtime.sendMessage({ msg: "GET_DOMAIN_INFO", data: tab.url }, update_content);
+    }
 })

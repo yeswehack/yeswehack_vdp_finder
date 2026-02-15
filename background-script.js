@@ -26,7 +26,13 @@ function get_ios_id(uri) {
 }
 
 function update_color() {
-    chrome.browserAction.setIcon({ path: "res/images/FF_ext_icon_" + color + ".svg" });
+    chrome.action.setIcon({
+        path: {
+            "48": "res/images/FF_ext_icon_" + color + "-48.png",
+            "96": "res/images/FF_ext_icon_" + color + "-96.png",
+            "128": "res/images/FF_ext_icon_" + color + "-128.png"
+        }
+    });
 }
 
 function getTab() {
@@ -87,7 +93,13 @@ function get_domain_info(urlStr) {
         color = "orange"
     }
 
-    chrome.browserAction.setIcon({ path: "res/images/FF_ext_icon_" + color + ".svg" });
+    chrome.action.setIcon({
+        path: {
+            "48": "res/images/FF_ext_icon_" + color + "-48.png",
+            "96": "res/images/FF_ext_icon_" + color + "-96.png",
+            "128": "res/images/FF_ext_icon_" + color + "-128.png"
+        }
+    });
     return { programs: programs, security_txt: security_txt, color: color, last_programs_update: CACHE.last_programs_update, lax: lax }
 }
 
@@ -218,15 +230,35 @@ async function check_security_txt(urlStr, force_update) {
     for (let i = 0; i < SECURITY_TXT_PATHS.length; ++i) {
         const path = SECURITY_TXT_PATHS[i]
         const security_txt_url = `${protocol}//${hostname}${path}`
-        const content = await fetch(security_txt_url, { cache: 'no-cache', redirect: 'manual' })
-            .then(r => r.status == 200 && r.text())
-            .then(txt => txt && !txt.startsWith("<") && txt)
-        if (content) {
-            /* update and stop if found */
-            CACHE.security_txt[hostname].content = content
-            CACHE.security_txt[hostname].url = security_txt_url
-            CACHE.security_txt[hostname].found = true
-            return
+
+        try {
+            const response = await fetch(security_txt_url, { cache: 'no-cache', redirect: 'follow' })
+
+            if (response.ok) {
+                const content = await response.text()
+
+                // Check if content looks like security.txt (not HTML)
+                if (content && content.trim().length > 0 && !content.trim().startsWith("<!DOCTYPE") && !content.trim().startsWith("<html")) {
+                    console.log(`[VDP Finder] Found security.txt at ${security_txt_url}`)
+                    CACHE.security_txt[hostname].content = content
+                    CACHE.security_txt[hostname].url = security_txt_url
+                    CACHE.security_txt[hostname].found = true
+                    return
+                } else {
+                    console.log(`[VDP Finder] ${security_txt_url} returned HTML or empty content`)
+                }
+            } else {
+                console.log(`[VDP Finder] ${security_txt_url} returned status ${response.status}`)
+            }
+        } catch (err) {
+            const errorType = err.message.includes('certificate') || err.message.includes('SSL') || err.message.includes('TLS') ? 'SSL/Certificate Error' : 'Network Error';
+            console.log(`[VDP Finder] ${errorType} fetching ${security_txt_url}: ${err.message}`)
+
+            // Note: SSL errors in service workers cannot bypass certificate warnings
+            // that the user may have accepted in the main browser window
+            if (errorType === 'SSL/Certificate Error') {
+                console.log(`[VDP Finder] Tip: If accessing via IP, try the hostname instead. Service workers cannot bypass SSL warnings.`)
+            }
         }
     }
 }
@@ -240,17 +272,21 @@ async function update_cache(force_update) {
 
 chrome.tabs.onUpdated.addListener(_ => {
     getTab().then(tab => {
-        check_security_txt(tab.url, false).then(_ => {
-            get_domain_info(tab.url)
-        })
+        if (tab && tab.url) {
+            check_security_txt(tab.url, false).then(_ => {
+                get_domain_info(tab.url)
+            })
+        }
     })
 });
 
 chrome.tabs.onActivated.addListener(_ => {
     getTab().then(tab => {
-        check_security_txt(tab.url, false).then(_ => {
-            get_domain_info(tab.url)
-        })
+        if (tab && tab.url) {
+            check_security_txt(tab.url, false).then(_ => {
+                get_domain_info(tab.url)
+            })
+        }
     })
 });
 
@@ -268,6 +304,31 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             break;
         case "GET_DOMAIN_INFO":
             sendResponse(get_domain_info(request.data))
+            break;
+        case "SECURITY_TXT_RESULT":
+            // Handle security.txt result from content script
+            if (request.data && request.data.hostname) {
+                CACHE.security_txt[request.data.hostname] = {
+                    last_update: new Date(),
+                    content: request.data.content || "",
+                    url: request.data.url || "",
+                    found: request.data.found || false
+                };
+                console.log(`[VDP Finder] Security.txt cache updated for ${request.data.hostname}: ${request.data.found ? 'found' : 'not found'}`);
+
+                // Update icon if this is the active tab
+                if (sender.tab) {
+                    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+                        if (tabs[0] && tabs[0].id === sender.tab.id) {
+                            get_domain_info(sender.tab.url);
+                        }
+                    });
+                }
+            }
+            break;
+        case "CHECK_SECURITY_TXT":
+            // Request from content script (handled by content script itself)
+            sendResponse({ received: true });
             break;
         default:
             console.error(`Unhandled message "${request.msg}"`)

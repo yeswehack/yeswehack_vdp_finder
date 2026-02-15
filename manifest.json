@@ -1,30 +1,49 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
     "name": "YesWeHack VDP Finder",
-    "version": "1.1.2",
+    "version": "1.1.6",
     "description": "This extension tells if visited sites have vulnerability disclosure programs",
     "homepage_url": "https://github.com/yeswehack/yeswehack_vdp_finder",
 
     "icons": {
+        "16": "res/images/icon-48.png",
+        "32": "res/images/icon-48.png", 
         "48": "res/images/FF_ext_icon_red-48.png",
-        "96": "res/images/FF_ext_icon_red-96.png"
+        "96": "res/images/FF_ext_icon_red-96.png",
+        "128": "res/images/FF_ext_icon_red-128.png"
     },
 
-    "browser_action": {
+    "action": {
         "default_title": "YesWeHack VDP Finder",
         "default_popup": "popup.html",
         "default_icon": {
+            "16": "res/images/icon-48.png",
+            "32": "res/images/icon-48.png",
             "48": "res/images/FF_ext_icon_gray-48.png",
-            "96": "res/images/FF_ext_icon_gray-96.png"
+            "96": "res/images/FF_ext_icon_gray-96.png",
+            "128": "res/images/FF_ext_icon_red-128.png"
         }
     },
 
     "background": {
-        "scripts": ["background-script.js"]
+        "service_worker": "background-script.js"
     },
+
+    "content_scripts": [{
+        "matches": ["http://*/*", "https://*/*"],
+        "js": ["content-script.js"],
+        "run_at": "document_idle"
+    }],
 
     "permissions": [
         "tabs",
-        "<all_urls>"
+        "activeTab"
+    ],
+
+    "host_permissions": [
+        "https://firebounty.com/*",
+        "https://publicsuffix.org/*",
+        "https://*/*",
+        "http://*/*"
     ]
 }
